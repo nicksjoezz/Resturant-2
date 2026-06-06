@@ -7,8 +7,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  // Hardcoded SQLite file path — no DATABASE_URL env var required, runs anywhere.
+  // For persistence on Railway: attach a Volume (e.g. mounted at /data), then change
+  // this to:  url = env("DATABASE_URL")  and set DATABASE_URL="file:/data/foddo.db".
+  url      = "file:./dev.db"
 }
 
 model Category {
