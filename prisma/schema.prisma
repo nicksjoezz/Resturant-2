@@ -1,0 +1,121 @@
+// Foddo — Prisma schema
+// Default provider is SQLite for zero-config local dev.
+// To use Postgres: change provider to "postgresql" and set DATABASE_URL accordingly.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  slug      String     @unique
+  order     Int        @default(0)
+  items     MenuItem[]
+  createdAt DateTime   @default(now())
+}
+
+model MenuItem {
+  id          String      @id @default(cuid())
+  name        String
+  description String
+  // Optional French translations (fall back to name/description when empty)
+  nameFr      String      @default("")
+  descriptionFr String    @default("")
+  price       Float
+  image       String
+  // Comma-separated tags e.g. "2min Craft,1lt Oil,30min Cook" (SQLite has no array type)
+  tags        String      @default("")
+  cuisine     String      @default("Signature")
+  spicy       Int         @default(0) // 0..3 heat level
+  featured    Boolean     @default(false)
+  available   Boolean     @default(true)
+  prepMinutes Int         @default(20)
+  calories    Int         @default(0)
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+// NOTE: SQLite has no native enums. These string fields are constrained at the
+// app layer via the union types in src/lib/types.ts.
+//   OrderStatus: PENDING | PAID | PREPARING | READY | COMPLETED | CANCELLED
+//   OrderType:   DELIVERY | PICKUP | DINE_IN
+
+model Order {
+  id              String      @id @default(cuid())
+  // Short human-friendly code shown to customers, e.g. "FD-7Q2K"
+  code            String      @unique
+  customerName    String
+  customerEmail   String
+  customerPhone   String      @default("")
+  address         String      @default("")
+  type            String      @default("DELIVERY")
+  status          String      @default("PENDING")
+  subtotal        Float
+  deliveryFee     Float       @default(0)
+  tax             Float       @default(0)
+  total           Float
+  notes           String      @default("")
+  // Payment: stripe | paypal | wise | cash | card-delivery
+  paymentMethod   String      @default("stripe")
+  paymentIntentId String?
+  paypalOrderId   String?
+  paid            Boolean     @default(false)
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String?
+  menuItem   MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+  // Snapshot fields so order history survives menu edits/deletes
+  name       String
+  price      Float
+  quantity   Int      @default(1)
+  image      String   @default("")
+}
+
+model Reservation {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String   @default("")
+  partySize Int      @default(2)
+  date      DateTime
+  time      String // "19:30"
+  occasion  String   @default("")
+  notes     String   @default("")
+  // ReservationStatus: REQUESTED | CONFIRMED | SEATED | CANCELLED
+  status    String   @default("REQUESTED")
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String   @default("")
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String   @default("Admin")
+  createdAt    DateTime @default(now())
+}
