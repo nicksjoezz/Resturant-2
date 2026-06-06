@@ -33,14 +33,11 @@ export default function CustomCursor() {
       const el = (e.target as HTMLElement)?.closest<HTMLElement>(
         '[data-cursor], a, button'
       );
-      if (!el) {
-        setLabel('');
-        setHovering(false);
-        return;
-      }
-      const tag = el.getAttribute('data-cursor');
-      setLabel(tag ?? '');
-      setHovering(true);
+      // Only update state when it actually changes (avoids re-renders on every move).
+      const nextLabel = el?.getAttribute('data-cursor') ?? '';
+      const nextHover = !!el;
+      setLabel((prev) => (prev === nextLabel ? prev : nextLabel));
+      setHovering((prev) => (prev === nextHover ? prev : nextHover));
     };
 
     window.addEventListener('mousemove', move);
@@ -59,12 +56,19 @@ export default function CustomCursor() {
   return (
     <motion.div
       className="pointer-events-none fixed left-0 top-0 z-[150] flex items-center justify-center rounded-full"
-      style={{ x: sx, y: sy, translateX: '-50%', translateY: '-50%' }}
+      // No mix-blend-mode (it forced a repaint under the cursor on every move).
+      // A solid fill + thin ring stays visible on both light surfaces and the dark hero.
+      style={{
+        x: sx,
+        y: sy,
+        translateX: '-50%',
+        translateY: '-50%',
+        boxShadow: '0 0 0 1.5px rgba(0,0,0,0.18)',
+      }}
       animate={{
-        width: label ? 76 : big ? 44 : 14,
-        height: label ? 76 : big ? 44 : 14,
-        backgroundColor: label ? '#F5D547' : '#F4EFE6',
-        mixBlendMode: label ? 'normal' : 'difference',
+        width: label ? 76 : big ? 40 : 13,
+        height: label ? 76 : big ? 40 : 13,
+        backgroundColor: label ? '#F5D547' : '#FFFFFF',
       }}
       transition={{ type: 'spring', stiffness: 400, damping: 28 }}
     >

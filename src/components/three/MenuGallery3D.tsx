@@ -164,17 +164,33 @@ function Carousel({ items, activeIndex, onActiveChange, onSelect }: Props) {
 }
 
 export default function MenuGallery3D(props: Props) {
+  // Pause the gallery's render loop when it scrolls out of view.
+  const [visible, setVisible] = useState(true);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), {
+      rootMargin: '120px',
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   if (!props.items.length) return null;
   return (
-    <Canvas
-      dpr={[1, 1.8]}
-      camera={{ position: [0, 0.3, 6.2], fov: 45 }}
-      gl={{ antialias: true, alpha: true }}
-      style={{ touchAction: 'pan-y' }}
-    >
-      <Suspense fallback={null}>
-        <Carousel {...props} />
-      </Suspense>
-    </Canvas>
+    <div ref={wrapRef} className="h-full w-full">
+      <Canvas
+        frameloop={visible ? 'always' : 'never'}
+        dpr={[1, 1.5]}
+        camera={{ position: [0, 0.3, 6.2], fov: 45 }}
+        gl={{ antialias: true, alpha: true }}
+        style={{ touchAction: 'pan-y' }}
+      >
+        <Suspense fallback={null}>
+          <Carousel {...props} />
+        </Suspense>
+      </Canvas>
+    </div>
   );
 }

@@ -2,13 +2,7 @@
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Float, MeshDistortMaterial, Sparkles, ContactShadows } from '@react-three/drei';
-import {
-  EffectComposer,
-  Bloom,
-  DepthOfField,
-  Vignette,
-  Noise,
-} from '@react-three/postprocessing';
+import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing';
 import { BlendFunction } from 'postprocessing';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -39,7 +33,7 @@ function Centerpiece() {
 
   return (
     <Float speed={1.4} rotationIntensity={0.5} floatIntensity={1.1}>
-      <mesh ref={ref} castShadow>
+      <mesh ref={ref}>
         <icosahedronGeometry args={[1.35, 64]} />
         <MeshDistortMaterial
           color="#E8622C"
@@ -97,7 +91,7 @@ function Scene({ heavy }: { heavy: boolean }) {
   return (
     <>
       <ambientLight intensity={0.4} />
-      <directionalLight position={[5, 6, 4]} intensity={2.2} castShadow color="#fff3df" />
+      <directionalLight position={[5, 6, 4]} intensity={2.2} color="#fff3df" />
       <pointLight position={[-4, -2, -3]} intensity={1.5} color="#E8622C" />
       <pointLight position={[4, 2, 3]} intensity={1.2} color="#F5D547" />
 
@@ -107,7 +101,7 @@ function Scene({ heavy }: { heavy: boolean }) {
       ))}
 
       <Sparkles
-        count={heavy ? 60 : 28}
+        count={heavy ? 34 : 14}
         scale={9}
         size={2.4}
         speed={0.3}
@@ -115,22 +109,24 @@ function Scene({ heavy }: { heavy: boolean }) {
         color="#F5D547"
       />
 
+      {/* frames={1} renders the soft shadow once instead of every frame */}
       <ContactShadows
         position={[0, -2.2, 0]}
         opacity={0.45}
         scale={12}
         blur={2.6}
         far={4}
+        frames={1}
         color="#000000"
       />
 
-      {/* Cinematic grade — only on capable (non-mobile) devices to protect phone GPUs/battery */}
+      {/* Cinematic grade — only on capable (non-mobile) devices. DOF dropped (it was the
+          heaviest pass); bloom/vignette/grain keep the look at a fraction of the cost. */}
       {heavy && (
-        <EffectComposer multisampling={4}>
-          <DepthOfField focusDistance={0} focalLength={0.028} bokehScale={2.2} />
-          <Bloom intensity={0.9} luminanceThreshold={0.2} luminanceSmoothing={0.9} mipmapBlur />
-          <Vignette eskil={false} offset={0.25} darkness={0.75} />
-          <Noise blendFunction={BlendFunction.OVERLAY} opacity={0.22} />
+        <EffectComposer multisampling={2}>
+          <Bloom intensity={0.85} luminanceThreshold={0.25} luminanceSmoothing={0.9} mipmapBlur />
+          <Vignette eskil={false} offset={0.25} darkness={0.7} />
+          <Noise blendFunction={BlendFunction.OVERLAY} opacity={0.18} />
         </EffectComposer>
       )}
     </>
@@ -140,6 +136,11 @@ function Scene({ heavy }: { heavy: boolean }) {
 export default function HeroScene() {
   // Heavy effects + higher DPR only on larger, fine-pointer (non-touch) devices.
   const [heavy, setHeavy] = useState(false);
+  // Pause the render loop entirely when the hero scrolls out of view — this is the
+  // single biggest CPU/GPU saver (no rAF burn while you read the rest of the page).
+  const [visible, setVisible] = useState(true);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px) and (pointer: fine)');
     const update = () => setHeavy(mq.matches);
@@ -148,17 +149,30 @@ export default function HeroScene() {
     return () => mq.removeEventListener('change', update);
   }, []);
 
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), {
+      rootMargin: '120px',
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <Canvas
-      shadows={heavy}
-      dpr={heavy ? [1, 1.8] : [1, 1.4]}
-      camera={{ position: [0, 0, 6.5], fov: 42 }}
-      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-      style={{ touchAction: 'pan-y' }}
-    >
-      <Suspense fallback={null}>
-        <Scene heavy={heavy} />
-      </Suspense>
-    </Canvas>
+    <div ref={wrapRef} className="h-full w-full">
+      <Canvas
+        frameloop={visible ? 'always' : 'never'}
+        shadows={false}
+        dpr={heavy ? [1, 1.6] : [1, 1.25]}
+        camera={{ position: [0, 0, 6.5], fov: 42 }}
+        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        style={{ touchAction: 'pan-y' }}
+      >
+        <Suspense fallback={null}>
+          <Scene heavy={heavy} />
+        </Suspense>
+      </Canvas>
+    </div>
   );
 }

@@ -5,10 +5,13 @@ export default function GrainOverlay() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-0 z-[100] opacity-[0.045] mix-blend-multiply"
+      // No mix-blend-mode: a blended full-screen layer forces the browser to
+      // recomposite the whole page every scroll/paint. A plain low-opacity layer
+      // gives the same paper texture for almost no cost.
+      className="pointer-events-none fixed inset-0 z-[100] opacity-[0.035]"
       style={{
         backgroundImage: `url("data:image/svg+xml,${svg}")`,
-        backgroundSize: '160px 160px',
+        backgroundSize: '150px 150px',
       }}
     />
   );
