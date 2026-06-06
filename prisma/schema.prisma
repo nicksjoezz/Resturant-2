@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -44,8 +44,8 @@ model MenuItem {
   updatedAt   DateTime    @updatedAt
 }
 
-// NOTE: SQLite has no native enums. These string fields are constrained at the
-// app layer via the union types in src/lib/types.ts.
+// NOTE: status/type are plain strings constrained at the app layer via the
+// union types in src/lib/types.ts (kept as strings for simple, portable migrations).
 //   OrderStatus: PENDING | PAID | PREPARING | READY | COMPLETED | CANCELLED
 //   OrderType:   DELIVERY | PICKUP | DINE_IN
 

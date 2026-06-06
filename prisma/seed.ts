@@ -339,6 +339,13 @@ const FR: Record<string, { name: string; description: string }> = {
 };
 
 async function main() {
+  // Idempotent: if the menu already exists, don't wipe live data on redeploys.
+  const alreadySeeded = await prisma.menuItem.count();
+  if (alreadySeeded > 0) {
+    console.log(`✅ Database already seeded (${alreadySeeded} items) — skipping.`);
+    return;
+  }
+
   console.log('🌱 Seeding Foddo database...');
 
   // Clean slate (order matters for FKs)
